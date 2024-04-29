@@ -4,6 +4,8 @@ use axum::{http::{header, HeaderMap}, response::IntoResponse, routing::get};
 use prometheus_client::{encoding::text::encode, registry::Registry};
 use tokio_util::sync::CancellationToken;
 
+use crate::scheduler;
+
 async fn get_metrics(registry: Arc<Registry>) -> impl IntoResponse {
     lazy_static::lazy_static! {
         static ref HEADERS: HeaderMap = {
@@ -17,6 +19,10 @@ async fn get_metrics(registry: Arc<Registry>) -> impl IntoResponse {
             headers
         };
     }
+
+    scheduler::collect_scheduler_metrics().await.unwrap_or_else(|e| {
+        tracing::warn!("Couldn't collect scheduler metrics: {e:?}");
+    });
 
     let mut buffer = String::new();
     encode(&mut buffer, &registry).unwrap();

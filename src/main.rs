@@ -6,6 +6,7 @@ mod cli;
 mod http_server;
 mod metrics;
 mod p2p;
+mod scheduler;
 
 fn setup_tracing() -> Result<()> {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -46,12 +47,8 @@ async fn main() -> anyhow::Result<()> {
     let mut metrics_registry = Default::default();
     metrics::register_metrics(&mut metrics_registry);
 
-    let mut observer = p2p::create_observer(
-        args.transport,
-        args.scheduler_id,
-        args.logs_collector_id,
-    )
-    .await?;
+    let mut observer =
+        p2p::create_observer(args.transport, args.scheduler_id, args.logs_collector_id).await?;
     let cancellation_token_child = cancellation_token.child_token();
     let observer_task = tokio::spawn(async move { observer.run(cancellation_token_child).await });
 
