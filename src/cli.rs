@@ -1,5 +1,5 @@
 use clap::Parser;
-use subsquid_network_transport::{cli::TransportArgs, PeerId};
+use subsquid_network_transport::{PeerId, TransportArgs};
 
 #[derive(Parser)]
 #[command(version)]

@@ -1,7 +1,6 @@
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge};
 use prometheus_client::registry::Registry;
-use subsquid_messages::query_executed;
 use subsquid_network_transport::PeerId;
 
 use crate::scheduler::WorkerStatus;
@@ -59,36 +58,6 @@ pub fn report_ping(peer_id: PeerId, version: String, stored_bytes: u64, total_ch
     STORED_CHUNKS
         .get_or_create(&worker)
         .set(total_chunks as i64);
-}
-
-pub fn report_query_executed(
-    worker_id: PeerId,
-    result: query_executed::Result,
-    seq_no: u64,
-    client_id: String,
-) {
-    let worker = WorkerLabels {
-        peer_id: Some(worker_id.to_string()),
-    };
-    match result {
-        query_executed::Result::Ok(_) => {
-            QUERIES_OK.get_or_create(&worker).inc();
-        }
-        query_executed::Result::BadRequest(_) => {
-            QUERIES_BAD_REQUEST.get_or_create(&worker).inc();
-        }
-        query_executed::Result::ServerError(_) => {
-            QUERIES_SERVER_ERROR.get_or_create(&worker).inc();
-        }
-    }
-    LAST_EXECUTED_QUERY
-        .get_or_create(&worker)
-        .set(seq_no as i64);
-    QUERIES_BY_CLIENT
-        .get_or_create(&ClientLabels {
-            client_id: Some(client_id),
-        })
-        .inc();
 }
 
 pub fn report_logs_collected(peer_id: String, seq_no: u64) {
