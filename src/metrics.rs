@@ -61,6 +61,7 @@ pub fn report_ping(peer_id: PeerId, version: String, stored_bytes: u64, total_ch
         .set(total_chunks as i64);
 }
 
+#[allow(dead_code)]
 pub fn report_query_executed(
     worker_id: PeerId,
     result: query_executed::Result,
