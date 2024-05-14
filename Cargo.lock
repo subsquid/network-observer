@@ -898,9 +898,8 @@ dependencies = [
 
 [[package]]
 name = "futures-bounded"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1e2774cc104e198ef3d3e1ff4ab40f86fa3245d6cb6a3a46174f21463cee173"
+version = "0.2.3-dev"
+source = "git+https://github.com/Wiezzel/rust-futures-bounded.git#701903a89d03b960b5d65e9331580a9af3292e05"
 dependencies = [
  "futures-timer",
  "futures-util",
@@ -909,7 +908,8 @@ dependencies = [
 [[package]]
 name = "futures-bounded"
 version = "0.2.3"
-source = "git+https://github.com/Wiezzel/rust-futures-bounded.git?rev=579106d#579106d700faac4c52d42dcfb29c711078ba8552"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1e2774cc104e198ef3d3e1ff4ab40f86fa3245d6cb6a3a46174f21463cee173"
 dependencies = [
  "futures-timer",
  "futures-util",
@@ -1642,7 +1642,7 @@ dependencies = [
  "asynchronous-codec",
  "either",
  "futures",
- "futures-bounded 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-bounded 0.2.3",
  "futures-timer",
  "instant",
  "libp2p-core",
@@ -1710,7 +1710,7 @@ dependencies = [
  "asynchronous-codec",
  "either",
  "futures",
- "futures-bounded 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-bounded 0.2.3",
  "futures-timer",
  "libp2p-core",
  "libp2p-identity",
@@ -1754,7 +1754,7 @@ dependencies = [
  "either",
  "fnv",
  "futures",
- "futures-bounded 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-bounded 0.2.3",
  "futures-timer",
  "instant",
  "libp2p-core",
@@ -1886,7 +1886,7 @@ dependencies = [
  "bytes",
  "either",
  "futures",
- "futures-bounded 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-bounded 0.2.3",
  "futures-timer",
  "instant",
  "libp2p-core",
@@ -1908,7 +1908,7 @@ source = "git+https://github.com/Wiezzel/rust-libp2p.git?rev=299b66e4#299b66e477
 dependencies = [
  "async-trait",
  "futures",
- "futures-bounded 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-bounded 0.2.3",
  "futures-timer",
  "instant",
  "libp2p-core",
@@ -3315,22 +3315,23 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "subsquid-messages"
-version = "0.2.0"
-source = "git+ssh://git@github.com/subsquid/subsquid-network.git#16acbbf1e689e0cad45ad7fbe53de9d35545b186"
+version = "0.2.2"
+source = "git+ssh://git@github.com/subsquid/subsquid-network.git#0f71127c9cd16c088ae04db91f80482c2e4565c4"
 dependencies = [
  "anyhow",
  "hex",
  "libp2p",
  "prost",
  "prost-build",
+ "semver",
  "serde",
  "sha3",
 ]
 
 [[package]]
 name = "subsquid-network-transport"
-version = "0.4.0"
-source = "git+ssh://git@github.com/subsquid/subsquid-network.git#16acbbf1e689e0cad45ad7fbe53de9d35545b186"
+version = "0.4.5"
+source = "git+ssh://git@github.com/subsquid/subsquid-network.git#0f71127c9cd16c088ae04db91f80482c2e4565c4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3339,7 +3340,7 @@ dependencies = [
  "derivative",
  "env_logger",
  "futures",
- "futures-bounded 0.2.3 (git+https://github.com/Wiezzel/rust-futures-bounded.git?rev=579106d)",
+ "futures-bounded 0.2.3-dev",
  "futures-core",
  "lazy_static",
  "libp2p",
@@ -3352,7 +3353,6 @@ dependencies = [
  "subsquid-messages",
  "thiserror",
  "tokio",
- "tokio-stream",
  "tokio-util",
 ]
 
@@ -3555,18 +3555,6 @@ checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
  "native-tls",
  "tokio",
-]
-
-[[package]]
-name = "tokio-stream"
-version = "0.1.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "267ac89e0bec6e691e5813911606935d77c476ff49024f98abcea3e7b15e37af"
-dependencies = [
- "futures-core",
- "pin-project-lite",
- "tokio",
- "tokio-util",
 ]
 
 [[package]]
