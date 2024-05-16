@@ -9,7 +9,7 @@ pub struct WorkerStatus {
     pub peer_id: String,
     pub address: String,
     pub last_ping: u64,
-    pub version: String,
+    pub version: Option<String>,
     pub jailed: bool,
     pub jail_reason: Option<String>,
     pub assigned_units: Vec<String>,
