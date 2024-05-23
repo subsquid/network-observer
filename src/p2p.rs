@@ -1,5 +1,6 @@
 use anyhow::Result;
 use futures::{Stream, StreamExt};
+use subsquid_messages::signatures::SignedMessage;
 use subsquid_messages::DatasetRanges;
 use subsquid_network_transport::{
     ObserverConfig, ObserverEvent, ObserverTransportHandle, P2PTransportBuilder, PeerId,
@@ -57,6 +58,31 @@ impl<EventStream: Stream<Item = ObserverEvent>> Observer<EventStream> {
             ObserverEvent::LogsCollected(logs) => {
                 for (peer_id, seq_no) in logs.sequence_numbers {
                     metrics::report_logs_collected(peer_id, seq_no + 1);
+                }
+            }
+            ObserverEvent::WorkerQueryLogs {
+                peer_id,
+                query_logs,
+            } => {
+                let worker_id = peer_id.to_base58();
+                for mut log in query_logs.queries_executed {
+                    if !(log.verify_signature(&peer_id) && log.worker_id == worker_id) {
+                        warn!("Invalid query log from {peer_id}");
+                        continue;
+                    }
+                    let (result, seq_no) = match (log.result, log.seq_no) {
+                        (Some(res), Some(seq_no)) => (res, seq_no),
+                        _ => {
+                            warn!("Invalid query log from {peer_id}");
+                            continue;
+                        }
+                    };
+                    metrics::report_query_executed(
+                        worker_id.clone(),
+                        result,
+                        seq_no,
+                        log.client_id,
+                    );
                 }
             }
         }
