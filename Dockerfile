@@ -1,5 +1,5 @@
 # See https://www.lpalmieri.com/posts/fast-rust-docker-builds/#cargo-chef for explanation
-FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:0.1.63-rust-1.76.0 AS chef
+FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:0.1.72-rust-1.89.0 AS chef
 WORKDIR /app
 
 
