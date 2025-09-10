@@ -1,24 +1,39 @@
 use clap::Parser;
-use subsquid_network_transport::{PeerId, TransportArgs};
+use libp2p::Multiaddr;
+use std::path::PathBuf;
+
+use sqd_contract_client::Network;
+use sqd_network_transport::BootNode;
 
 #[derive(Parser)]
-#[command(version)]
-pub struct Args {
-    /// Port to listen on
-    #[clap(short, long, env, default_value_t = 8000)]
-    pub port: u16,
+#[command()]
+pub(crate) struct Cli {
+    /// HTTP port to listen on
+    #[arg(short, long, default_value_t = 8000)]
+    pub(crate) port: u16,
 
-    /// Peer ID of the scheduler
-    #[clap(long, env)]
-    pub scheduler_id: PeerId,
+    /// Path to libp2p key file
+    #[arg(short, long, env = "KEY_PATH")]
+    pub key: PathBuf,
 
-    /// Peer ID of the logs collector
-    #[clap(long, env)]
-    pub logs_collector_id: PeerId,
+    /// Addresses on which the p2p node will listen
+    #[arg(long, env, value_delimiter = ',')]
+    pub p2p_listen_addrs: Vec<Multiaddr>,
 
-    #[command(flatten)]
-    pub transport: TransportArgs,
+    /// Public address(es) on which the p2p node can be reached
+    #[arg(long, env, value_delimiter = ',')]
+    pub p2p_public_addrs: Vec<Multiaddr>,
 
-    #[clap(env, hide(true))]
-    pub sentry_dsn: Option<String>,
+    /// Connect to boot node '<peer_id> <address>'.
+    #[arg(
+            long,
+            env,
+            value_delimiter = ',',
+            num_args = 1..,
+        )]
+    pub boot_nodes: Vec<BootNode>,
+
+    /// Network to connect to (mainnet or tethys)
+    #[arg(long, env, default_value_t = Network::Mainnet)]
+    pub network: Network,
 }

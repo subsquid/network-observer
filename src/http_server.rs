@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use axum::{http::{header, HeaderMap}, response::IntoResponse, routing::get};
+use axum::{
+    http::{header, HeaderMap},
+    response::IntoResponse,
+    routing::get,
+};
 use prometheus_client::{encoding::text::encode, registry::Registry};
-use tokio_util::sync::CancellationToken;
-
-use crate::scheduler;
 
 async fn get_metrics(registry: Arc<Registry>) -> impl IntoResponse {
     lazy_static::lazy_static! {
@@ -19,10 +20,6 @@ async fn get_metrics(registry: Arc<Registry>) -> impl IntoResponse {
             headers
         };
     }
-
-    scheduler::collect_scheduler_metrics().await.unwrap_or_else(|e| {
-        tracing::warn!("Couldn't collect scheduler metrics: {e:?}");
-    });
 
     let mut buffer = String::new();
     encode(&mut buffer, &registry).unwrap();
@@ -42,11 +39,9 @@ impl Server {
         Self { router }
     }
 
-    pub async fn run(self, port: u16, cancellation_token: CancellationToken) -> anyhow::Result<()> {
+    pub async fn run(self, port: u16) -> anyhow::Result<()> {
         let listener = tokio::net::TcpListener::bind(("0.0.0.0", port)).await?;
-        axum::serve(listener, self.router)
-            .with_graceful_shutdown(cancellation_token.cancelled_owned())
-            .await?;
+        axum::serve(listener, self.router).await?;
         Ok(())
     }
 }

@@ -1,63 +1,95 @@
-use anyhow::Result;
 use clap::Parser;
-use tokio_util::sync::CancellationToken;
+use env_logger::Env;
+
+use futures::StreamExt;
 
 mod cli;
 mod http_server;
 mod metrics;
-mod p2p;
-mod scheduler;
+mod transport;
 
-fn setup_tracing() -> Result<()> {
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
-    let fmt = tracing_subscriber::fmt::layer()
-        .compact()
-        .with_filter(EnvFilter::from_default_env());
-    tracing_subscriber::registry().with(fmt).try_init()?;
-    Ok(())
-}
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
 
-fn create_cancellation_token() -> Result<CancellationToken> {
-    use tokio::signal::unix::{signal, SignalKind};
-
-    let token = CancellationToken::new();
-    let copy = token.clone();
-    let mut sigint = signal(SignalKind::interrupt())?;
-    let mut sigterm = signal(SignalKind::terminate())?;
-    tokio::spawn(async move {
-        tokio::select!(
-            _ = sigint.recv() => {
-                copy.cancel();
-            },
-            _ = sigterm.recv() => {
-                copy.cancel();
-            },
-        );
-    });
-    Ok(token)
-}
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().ok();
-    let args = cli::Args::parse();
-    setup_tracing()?;
-    let cancellation_token = create_cancellation_token()?;
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let args = cli::Cli::parse();
 
-    let mut metrics_registry = Default::default();
-    metrics::register_metrics(&mut metrics_registry);
+    let mut registry = prometheus_client::registry::Registry::default();
+    metrics::register_metrics(&mut registry);
+    let libp2p_metrics = libp2p::metrics::Metrics::new(&mut registry);
 
-    let mut observer =
-        p2p::create_observer(args.transport, args.scheduler_id, args.logs_collector_id).await?;
-    let cancellation_token_child = cancellation_token.child_token();
-    let observer_task = tokio::spawn(async move { observer.run(cancellation_token_child).await });
+    tokio::spawn(http_server::Server::new(registry).run(args.port));
 
-    let http_server = http_server::Server::new(metrics_registry);
-    let server_task = tokio::spawn(http_server.run(args.port, cancellation_token.child_token()));
+    let transport = transport::Transport::build(args, libp2p_metrics).await?;
+    tokio::spawn(run_transport(transport));
 
-    let (observer_result, server_result) = tokio::join!(observer_task, server_task);
-    observer_result??;
-    server_result??;
+    tokio::signal::ctrl_c().await?;
+    log::info!("Shutting down");
 
     Ok(())
+}
+
+async fn run_transport(mut transport: transport::Transport) -> ! {
+    loop {
+        match transport.select_next_some().await {
+            transport::Event::PeerSeen(event) => {
+                let mut address = event.address;
+                while let Some(libp2p::multiaddr::Protocol::P2p(_)) = address.iter().last() {
+                    address.pop();
+                }
+                metrics::peer_seen(&event.peer_id.to_string(), &address.to_string());
+            }
+            transport::Event::WorkerHeartbeat(event) => {
+                let peer_id = event
+                    .peer_id
+                    .map(|peer_id| peer_id.to_string())
+                    .unwrap_or_else(|| {
+                        log::warn!("Received heartbeat from unknown peer");
+                        "unknown".to_string()
+                    });
+
+                let missing_chunks = event
+                    .heartbeat
+                    .missing_chunks
+                    .map(|bitstring| bitstring.ones())
+                    .unwrap_or_else(|| {
+                        log::warn!("Received heartbeat without missing_chunks from {peer_id}");
+                        0
+                    });
+
+                let assignment_time = chrono::NaiveDateTime::parse_and_remainder(
+                    &event.heartbeat.assignment_id,
+                    "%Y-%m-%dT%H:%M:%S",
+                )
+                .map(|(time, _)| time.and_utc().timestamp())
+                .unwrap_or_else(|e| {
+                    log::warn!(
+                        "Failed to parse assignment_id '{}': {e}",
+                        &event.heartbeat.assignment_id
+                    );
+                    0
+                });
+
+                metrics::worker_heartbeat(
+                    &peer_id,
+                    missing_chunks,
+                    event.heartbeat.stored_bytes.unwrap_or_default(),
+                    assignment_time,
+                );
+            }
+            transport::Event::Ping(event) => {
+                if let Ok(duration) = event.result {
+                    metrics::ping(&event.peer.to_string(), duration);
+                } else {
+                    metrics::ping_failed(&event.peer.to_string());
+                }
+            }
+        }
+    }
 }
