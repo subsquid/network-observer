@@ -1,4 +1,4 @@
-use std::{sync::atomic::AtomicU64, time::Duration};
+use std::{sync::{atomic::AtomicU64, Mutex}, time::Duration};
 
 use lazy_static::lazy_static;
 use prometheus_client::{
@@ -15,6 +15,11 @@ lazy_static! {
     pub static ref ASSIGNMENT_TIMESTAMP: Family::<Labels, Gauge> = Family::default();
     pub static ref PINGS_TOTAL: Family<Labels, Counter> = Family::default();
     pub static ref LAST_PING_TIME: Family<Labels, Gauge<f64, AtomicU64>> = Family::default();
+    pub static ref NETWORK_NAME: Mutex<String> = Mutex::new("UNDEFINED".to_owned());
+}
+
+pub fn set_network_name(network_name: String) {
+    *NETWORK_NAME.lock().unwrap() = network_name;
 }
 
 pub fn peer_seen(peer_id: &str, addr: &str) {
@@ -22,6 +27,7 @@ pub fn peer_seen(peer_id: &str, addr: &str) {
         .get_or_create(&vec![
             ("peer_id", peer_id.to_owned()),
             ("addr", addr.to_owned()),
+            ("network", NETWORK_NAME.lock().unwrap().to_owned()),
         ])
         .set(now());
 }
@@ -32,7 +38,10 @@ pub fn worker_heartbeat(
     stored_bytes: u64,
     assignment_timestamp: i64,
 ) {
-    let labels = vec![("peer_id", peer_id.to_owned())];
+    let labels = vec![
+        ("peer_id", peer_id.to_owned()),
+        ("network", NETWORK_NAME.lock().unwrap().to_owned()),
+    ];
     MISSING_CHUNKS
         .get_or_create(&labels)
         .set(missing_chunks as i64);
@@ -43,7 +52,10 @@ pub fn worker_heartbeat(
 }
 
 pub fn ping(peer_id: &str, duration: Duration) {
-    let labels = vec![("peer_id", peer_id.to_owned())];
+    let labels = vec![
+        ("peer_id", peer_id.to_owned()),
+        ("network", NETWORK_NAME.lock().unwrap().to_owned()),
+    ];
     PINGS_TOTAL.get_or_create(&labels).inc();
     LAST_PING_TIME
         .get_or_create(&labels)
@@ -51,7 +63,10 @@ pub fn ping(peer_id: &str, duration: Duration) {
 }
 
 pub fn ping_failed(peer_id: &str) {
-    LAST_PING_TIME.remove(&vec![("peer_id", peer_id.to_owned())]);
+    LAST_PING_TIME.remove(&vec![
+        ("peer_id", peer_id.to_owned()),
+        ("network", NETWORK_NAME.lock().unwrap().to_owned()),
+    ]);
 }
 
 pub fn register_metrics(registry: &mut Registry) {

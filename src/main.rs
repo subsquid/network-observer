@@ -26,8 +26,12 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(http_server::Server::new(registry).run(args.port));
 
+    let network_name = match args.network {
+        sqd_contract_client::Network::Tethys => "mainnet".to_owned(),
+        sqd_contract_client::Network::Mainnet => "testnet".to_owned(),
+    };
     let transport = transport::Transport::build(args, libp2p_metrics).await?;
-    tokio::spawn(run_transport(transport));
+    tokio::spawn(run_transport(transport, network_name));
 
     tokio::signal::ctrl_c().await?;
     log::info!("Shutting down");
@@ -35,7 +39,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_transport(mut transport: transport::Transport) -> ! {
+async fn run_transport(mut transport: transport::Transport, network_name: String) -> ! {
+    metrics::set_network_name(network_name);
     loop {
         match transport.select_next_some().await {
             transport::Event::PeerSeen(event) => {
