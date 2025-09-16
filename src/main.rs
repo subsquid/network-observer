@@ -27,8 +27,8 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(http_server::Server::new(registry).run(args.port));
 
     let network_name = match args.network {
-        sqd_contract_client::Network::Tethys => "mainnet".to_owned(),
-        sqd_contract_client::Network::Mainnet => "testnet".to_owned(),
+        sqd_contract_client::Network::Tethys => "testnet".to_owned(),
+        sqd_contract_client::Network::Mainnet => "mainnet".to_owned(),
     };
     let transport = transport::Transport::build(args, libp2p_metrics).await?;
     tokio::spawn(run_transport(transport, network_name));
